@@ -1,19 +1,18 @@
-from rlm.environments.base_env import NonIsolatedEnv
-from rlm.core.comms_utils import send_lm_request, send_lm_request_batched, LMRequest
-from rlm.core.types import RLMChatCompletion, REPLResult
-
-from typing import Optional, Any, Tuple, List
-from contextlib import contextmanager
+import io
+import json
+import os
+import shutil
+import sys
 import tempfile
 import threading
-import shutil
-import uuid
-import json
 import time
-import sys
-import os
-import io
+import uuid
+from contextlib import contextmanager
+from typing import Any
 
+from rlm.core.comms_utils import LMRequest, send_lm_request, send_lm_request_batched
+from rlm.core.types import REPLResult, RLMChatCompletion
+from rlm.environments.base_env import NonIsolatedEnv
 
 # =============================================================================
 # Safe Builtins
@@ -120,9 +119,9 @@ class LocalREPL(NonIsolatedEnv):
 
     def __init__(
         self,
-        lm_handler_address: Optional[Tuple[str, int]] = None,
-        context_payload: Optional[dict | list | str] = None,
-        setup_code: Optional[str] = None,
+        lm_handler_address: tuple[str, int] | None = None,
+        context_payload: dict | list | str | None = None,
+        setup_code: str | None = None,
         **kwargs,
     ):
         super().__init__(**kwargs)
@@ -153,7 +152,7 @@ class LocalREPL(NonIsolatedEnv):
         self.locals: dict[str, Any] = {}
 
         # Track LLM calls made during code execution
-        self._pending_llm_calls: List[RLMChatCompletion] = []
+        self._pending_llm_calls: list[RLMChatCompletion] = []
 
         # Add helper functions
         self.globals["FINAL_VAR"] = self._final_var
@@ -167,7 +166,7 @@ class LocalREPL(NonIsolatedEnv):
             return str(self.locals[variable_name])
         return f"Error: Variable '{variable_name}' not found"
 
-    def _llm_query(self, prompt: str, model: Optional[str] = None) -> str:
+    def _llm_query(self, prompt: str, model: str | None = None) -> str:
         """Query the LM via socket connection to the handler.
 
         Args:
@@ -193,9 +192,7 @@ class LocalREPL(NonIsolatedEnv):
         except Exception as e:
             return f"Error: LM query failed - {e}"
 
-    def _llm_query_batched(
-        self, prompts: List[str], model: Optional[str] = None
-    ) -> List[str]:
+    def _llm_query_batched(self, prompts: list[str], model: str | None = None) -> list[str]:
         """Query the LM with multiple prompts concurrently.
 
         Args:
@@ -209,9 +206,7 @@ class LocalREPL(NonIsolatedEnv):
             return ["Error: No LM handler configured"] * len(prompts)
 
         try:
-            responses = send_lm_request_batched(
-                self.lm_handler_address, prompts, model=model
-            )
+            responses = send_lm_request_batched(self.lm_handler_address, prompts, model=model)
 
             results = []
             for response in responses:
@@ -232,9 +227,7 @@ class LocalREPL(NonIsolatedEnv):
             context_path = os.path.join(self.temp_dir, "context.txt")
             with open(context_path, "w") as f:
                 f.write(context_payload)
-            self.execute_code(
-                f"with open(r'{context_path}', 'r') as f:\n    context = f.read()"
-            )
+            self.execute_code(f"with open(r'{context_path}', 'r') as f:\n    context = f.read()")
         else:
             context_path = os.path.join(self.temp_dir, "context.json")
             with open(context_path, "w") as f:

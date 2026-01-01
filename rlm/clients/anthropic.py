@@ -1,8 +1,10 @@
-from rlm.clients.base_lm import BaseLM
-from rlm.core.types import UsageSummary, ModelUsageSummary
-from typing import Dict, Any, Optional, List
 from collections import defaultdict
+from typing import Any
+
 import anthropic
+
+from rlm.clients.base_lm import BaseLM
+from rlm.core.types import ModelUsageSummary, UsageSummary
 
 
 class AnthropicClient(BaseLM):
@@ -13,7 +15,7 @@ class AnthropicClient(BaseLM):
     def __init__(
         self,
         api_key: str,
-        model_name: Optional[str] = None,
+        model_name: str | None = None,
         max_tokens: int = 32768,
         **kwargs,
     ):
@@ -24,14 +26,12 @@ class AnthropicClient(BaseLM):
         self.max_tokens = max_tokens
 
         # Per-model usage tracking
-        self.model_call_counts: Dict[str, int] = defaultdict(int)
-        self.model_input_tokens: Dict[str, int] = defaultdict(int)
-        self.model_output_tokens: Dict[str, int] = defaultdict(int)
-        self.model_total_tokens: Dict[str, int] = defaultdict(int)
+        self.model_call_counts: dict[str, int] = defaultdict(int)
+        self.model_input_tokens: dict[str, int] = defaultdict(int)
+        self.model_output_tokens: dict[str, int] = defaultdict(int)
+        self.model_total_tokens: dict[str, int] = defaultdict(int)
 
-    def completion(
-        self, prompt: str | List[Dict[str, Any]], model: Optional[str] = None
-    ) -> str:
+    def completion(self, prompt: str | list[dict[str, Any]], model: str | None = None) -> str:
         messages, system = self._prepare_messages(prompt)
 
         model = model or self.model_name
@@ -47,7 +47,7 @@ class AnthropicClient(BaseLM):
         return response.content[0].text
 
     async def acompletion(
-        self, prompt: str | List[Dict[str, Any]], model: Optional[str] = None
+        self, prompt: str | list[dict[str, Any]], model: str | None = None
     ) -> str:
         messages, system = self._prepare_messages(prompt)
 
@@ -64,16 +64,14 @@ class AnthropicClient(BaseLM):
         return response.content[0].text
 
     def _prepare_messages(
-        self, prompt: str | List[Dict[str, Any]]
-    ) -> tuple[List[Dict[str, Any]], Optional[str]]:
+        self, prompt: str | list[dict[str, Any]]
+    ) -> tuple[list[dict[str, Any]], str | None]:
         """Prepare messages and extract system prompt for Anthropic API."""
         system = None
 
         if isinstance(prompt, str):
             messages = [{"role": "user", "content": prompt}]
-        elif isinstance(prompt, list) and all(
-            isinstance(item, dict) for item in prompt
-        ):
+        elif isinstance(prompt, list) and all(isinstance(item, dict) for item in prompt):
             # Extract system message if present (Anthropic handles system separately)
             messages = []
             for msg in prompt:
@@ -90,9 +88,7 @@ class AnthropicClient(BaseLM):
         self.model_call_counts[model] += 1
         self.model_input_tokens[model] += response.usage.input_tokens
         self.model_output_tokens[model] += response.usage.output_tokens
-        self.model_total_tokens[model] += (
-            response.usage.input_tokens + response.usage.output_tokens
-        )
+        self.model_total_tokens[model] += response.usage.input_tokens + response.usage.output_tokens
 
         # Track last call for handler to read
         self.last_prompt_tokens = response.usage.input_tokens

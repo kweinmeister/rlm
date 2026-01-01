@@ -1,8 +1,9 @@
-from rlm.logger import RLMLogger
-from rlm import RLM
-
 import os
+
 from dotenv import load_dotenv
+
+from rlm import RLM
+from rlm.logger import RLMLogger
 
 load_dotenv()
 
@@ -19,7 +20,5 @@ rlm = RLM(
     logger=logger,
 )
 
-result = rlm.completion(
-    "Using your code, solve 2^(2^(2^(2))). Show your work in Python."
-)
+result = rlm.completion("Using your code, solve 2^(2^(2^(2))). Show your work in Python.")
 print(result)

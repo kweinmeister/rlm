@@ -1,20 +1,18 @@
 from dataclasses import dataclass
-from typing import Literal, List, Dict, Any, Optional
 from types import ModuleType
+from typing import Any, Literal
 
-ClientBackend = Literal[
-    "openai", "portkey", "openrouter", "vllm", "litellm", "anthropic"
-]
+ClientBackend = Literal["openai", "portkey", "openrouter", "vllm", "litellm", "anthropic"]
 EnvironmentType = Literal["local", "prime", "modal"]
 
 
 def _serialize_value(value: Any) -> Any:
     """Convert a value to a JSON-serializable representation."""
-    if value is None or isinstance(value, (bool, int, float, str)):
+    if value is None or isinstance(value, bool | int | float | str):
         return value
     if isinstance(value, ModuleType):
         return f"<module '{value.__name__}'>"
-    if isinstance(value, (list, tuple)):
+    if isinstance(value, list | tuple):
         return [_serialize_value(v) for v in value]
     if isinstance(value, dict):
         return {str(k): _serialize_value(v) for k, v in value.items()}
@@ -56,7 +54,7 @@ class ModelUsageSummary:
 
 @dataclass
 class UsageSummary:
-    model_usage_summaries: Dict[str, ModelUsageSummary]
+    model_usage_summaries: dict[str, ModelUsageSummary]
 
     def to_dict(self):
         return {
@@ -71,9 +69,7 @@ class UsageSummary:
         return cls(
             model_usage_summaries={
                 model: ModelUsageSummary.from_dict(usage_summary)
-                for model, usage_summary in data.get(
-                    "model_usage_summaries", {}
-                ).items()
+                for model, usage_summary in data.get("model_usage_summaries", {}).items()
             },
         )
 
@@ -86,7 +82,7 @@ class RLMChatCompletion:
     """Record of a single LLM call made from within the environment."""
 
     root_model: str
-    prompt: str | Dict[str, Any]
+    prompt: str | dict[str, Any]
     response: str
     usage_summary: UsageSummary
     execution_time: float
@@ -117,7 +113,7 @@ class REPLResult:
     stderr: str
     locals: dict
     execution_time: float
-    llm_calls: List["RLMChatCompletion"]
+    llm_calls: list["RLMChatCompletion"]
 
     def __init__(
         self,
@@ -125,7 +121,7 @@ class REPLResult:
         stderr: str,
         locals: dict,
         execution_time: float = None,
-        rlm_calls: List["RLMChatCompletion"] = None,
+        rlm_calls: list["RLMChatCompletion"] = None,
     ):
         self.stdout = stdout
         self.stderr = stderr
@@ -157,11 +153,11 @@ class CodeBlock:
 
 @dataclass
 class RLMIteration:
-    prompt: str | Dict[str, Any]
+    prompt: str | dict[str, Any]
     response: str
-    code_blocks: List[CodeBlock]
-    final_answer: Optional[str] = None
-    iteration_time: Optional[float] = None
+    code_blocks: list[CodeBlock]
+    final_answer: str | None = None
+    iteration_time: float | None = None
 
     def to_dict(self):
         return {
@@ -186,10 +182,10 @@ class RLMMetadata:
     max_depth: int
     max_iterations: int
     backend: str
-    backend_kwargs: Dict[str, Any]
+    backend_kwargs: dict[str, Any]
     environment_type: str
-    environment_kwargs: Dict[str, Any]
-    other_backends: Optional[List[str]] = None
+    environment_kwargs: dict[str, Any]
+    other_backends: list[str] | None = None
 
     def to_dict(self):
         return {
@@ -197,9 +193,7 @@ class RLMMetadata:
             "max_depth": self.max_depth,
             "max_iterations": self.max_iterations,
             "backend": self.backend,
-            "backend_kwargs": {
-                k: _serialize_value(v) for k, v in self.backend_kwargs.items()
-            },
+            "backend_kwargs": {k: _serialize_value(v) for k, v in self.backend_kwargs.items()},
             "environment_type": self.environment_type,
             "environment_kwargs": {
                 k: _serialize_value(v) for k, v in self.environment_kwargs.items()
@@ -215,15 +209,15 @@ class RLMMetadata:
 
 @dataclass
 class QueryMetadata:
-    context_lengths: List[int]
+    context_lengths: list[int]
     context_total_length: int
     context_type: str
 
-    def __init__(self, prompt: str | List[str] | Dict[Any, str] | List[Dict[Any, str]]):
+    def __init__(self, prompt: str | list[str] | dict[Any, str] | list[dict[Any, str]]):
         if isinstance(prompt, str):
             self.context_lengths = [len(prompt)]
             self.context_type = "str"
-        elif isinstance(prompt, Dict[Any, str]):
+        elif isinstance(prompt, dict[Any, str]):
             self.context_lengths = [len(chunk) for chunk in prompt.values()]
             self.context_type = "dict"
         elif isinstance(prompt, list):

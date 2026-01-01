@@ -5,11 +5,11 @@ Protocol: 4-byte big-endian length prefix + JSON payload.
 Used for communication between LMHandler and environment subprocesses.
 """
 
-from dataclasses import dataclass
-from typing import Optional, Tuple, Dict, Any, List
+import json
 import socket
 import struct
-import json
+from dataclasses import dataclass
+from typing import Any
 
 from rlm.core.types import RLMChatCompletion
 
@@ -25,9 +25,9 @@ class LMRequest:
     Supports both single prompt (prompt field) and batched prompts (prompts field).
     """
 
-    prompt: Optional[str | Dict[str, Any]] = None
-    prompts: Optional[List[str | Dict[str, Any]]] = None
-    model: Optional[str] = None
+    prompt: str | dict[str, Any] | None = None
+    prompts: list[str | dict[str, Any]] | None = None
+    model: str | None = None
 
     @property
     def is_batched(self) -> bool:
@@ -62,9 +62,9 @@ class LMResponse:
     Supports both single response (chat_completion) and batched responses (chat_completions).
     """
 
-    error: Optional[str] = None
-    chat_completion: Optional[RLMChatCompletion] = None
-    chat_completions: Optional[List[RLMChatCompletion]] = None
+    error: str | None = None
+    chat_completion: RLMChatCompletion | None = None
+    chat_completions: list[RLMChatCompletion] | None = None
 
     @property
     def success(self) -> bool:
@@ -107,9 +107,7 @@ class LMResponse:
         """Create from dict."""
         chat_completions = None
         if data.get("chat_completions"):
-            chat_completions = [
-                RLMChatCompletion.from_dict(c) for c in data["chat_completions"]
-            ]
+            chat_completions = [RLMChatCompletion.from_dict(c) for c in data["chat_completions"]]
 
         chat_completion = None
         if data.get("chat_completion"):
@@ -127,9 +125,7 @@ class LMResponse:
         return cls(chat_completion=chat_completion)
 
     @classmethod
-    def batched_success_response(
-        cls, chat_completions: List[RLMChatCompletion]
-    ) -> "LMResponse":
+    def batched_success_response(cls, chat_completions: list[RLMChatCompletion]) -> "LMResponse":
         """Create a successful batched response."""
         return cls(chat_completions=chat_completions)
 
@@ -177,7 +173,7 @@ def socket_recv(sock: socket.socket) -> dict:
     return json.loads(payload.decode("utf-8"))
 
 
-def socket_request(address: Tuple[str, int], data: dict, timeout: int = 300) -> dict:
+def socket_request(address: tuple[str, int], data: dict, timeout: int = 300) -> dict:
     """Send a request and receive a response over a new socket connection.
 
     Opens a new TCP connection, sends the request, waits for response, then closes.
@@ -202,9 +198,7 @@ def socket_request(address: Tuple[str, int], data: dict, timeout: int = 300) -> 
 # =============================================================================
 
 
-def send_lm_request(
-    address: Tuple[str, int], request: LMRequest, timeout: int = 300
-) -> LMResponse:
+def send_lm_request(address: tuple[str, int], request: LMRequest, timeout: int = 300) -> LMResponse:
     """Send an LM request and return typed response.
 
     Args:
@@ -223,11 +217,11 @@ def send_lm_request(
 
 
 def send_lm_request_batched(
-    address: Tuple[str, int],
-    prompts: List[str | Dict[str, Any]],
-    model: Optional[str] = None,
+    address: tuple[str, int],
+    prompts: list[str | dict[str, Any]],
+    model: str | None = None,
     timeout: int = 300,
-) -> List[LMResponse]:
+) -> list[LMResponse]:
     """Send a batched LM request and return a list of typed responses.
 
     Args:

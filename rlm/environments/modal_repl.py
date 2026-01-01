@@ -1,17 +1,15 @@
-from rlm.environments.base_env import IsolatedEnv
-from rlm.core.comms_utils import send_lm_request, send_lm_request_batched, LMRequest
-from rlm.core.types import REPLResult, RLMChatCompletion
-
-from typing import Optional, Tuple, List
-import threading
-import requests
-import time
+import base64
 import json
 import textwrap
-import base64
+import threading
+import time
 
 import modal
+import requests
 
+from rlm.core.comms_utils import LMRequest, send_lm_request, send_lm_request_batched
+from rlm.core.types import REPLResult, RLMChatCompletion
+from rlm.environments.base_env import IsolatedEnv
 
 # =============================================================================
 # Default Modal Image
@@ -84,20 +82,20 @@ def enqueue():
     data = request.json
     request_id = str(uuid.uuid4())
     event = threading.Event()
-    
+
     with lock:
         pending_requests[request_id] = {
             "request": data,
             "response": None,
             "event": event,
         }
-    
+
     # Wait for response (with timeout)
     event.wait(timeout=300)
-    
+
     with lock:
         entry = pending_requests.pop(request_id, None)
-    
+
     if entry and entry["response"] is not None:
         return jsonify(entry["response"])
     else:
@@ -120,13 +118,13 @@ def respond():
     data = request.json
     request_id = data.get("id")
     response = data.get("response")
-    
+
     with lock:
         if request_id in pending_requests:
             pending_requests[request_id]["response"] = response
             pending_requests[request_id]["event"].set()
             return jsonify({"status": "ok"})
-    
+
     return jsonify({"error": "Request not found"}), 404
 
 if __name__ == "__main__":
@@ -306,11 +304,11 @@ class ModalREPL(IsolatedEnv):
     def __init__(
         self,
         app_name: str = "rlm-sandbox",
-        image: Optional[modal.Image] = None,
+        image: modal.Image | None = None,
         timeout: int = 600,
-        lm_handler_address: Optional[Tuple[str, int]] = None,
-        context_payload: Optional[dict | list | str] = None,
-        setup_code: Optional[str] = None,
+        lm_handler_address: tuple[str, int] | None = None,
+        context_payload: dict | list | str | None = None,
+        setup_code: str | None = None,
         **kwargs,
     ):
         super().__init__(**kwargs)
@@ -324,10 +322,10 @@ class ModalREPL(IsolatedEnv):
         self.app = None
         self.sandbox = None
         self.broker_process = None
-        self.broker_url: Optional[str] = None
-        self.poller_thread: Optional[threading.Thread] = None
+        self.broker_url: str | None = None
+        self.poller_thread: threading.Thread | None = None
         self.poller_stop = threading.Event()
-        self.pending_llm_calls: List[RLMChatCompletion] = []
+        self.pending_llm_calls: list[RLMChatCompletion] = []
         self._calls_lock = threading.Lock()
 
         self.setup()
@@ -424,9 +422,7 @@ class ModalREPL(IsolatedEnv):
 
         elif req_type == "batched":
             prompts = req_data.get("prompts", [])
-            responses = send_lm_request_batched(
-                self.lm_handler_address, prompts, model=model
-            )
+            responses = send_lm_request_batched(self.lm_handler_address, prompts, model=model)
 
             results = []
             for resp in responses:

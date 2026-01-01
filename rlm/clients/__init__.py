@@ -1,15 +1,16 @@
-from rlm.clients.base_lm import BaseLM
-from rlm.core.types import ClientBackend
+from typing import Any
 
 from dotenv import load_dotenv
-from typing import Dict, Any
+
+from rlm.clients.base_lm import BaseLM
+from rlm.core.types import ClientBackend
 
 load_dotenv()
 
 
 def get_client(
     backend: ClientBackend,
-    backend_kwargs: Dict[str, Any],
+    backend_kwargs: dict[str, Any],
 ) -> BaseLM:
     """
     Routes a specific backend and the args (as a dict) to the appropriate client if supported.

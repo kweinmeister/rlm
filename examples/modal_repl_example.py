@@ -4,10 +4,10 @@ Example usage of Modal REPL with code execution and LLM queries.
 Run with: python -m examples.modal_repl_example
 """
 
-from rlm.environments.modal_repl import ModalREPL
 from rlm.clients.base_lm import BaseLM
 from rlm.core.lm_handler import LMHandler
-from rlm.core.types import UsageSummary, ModelUsageSummary
+from rlm.core.types import ModelUsageSummary, UsageSummary
+from rlm.environments.modal_repl import ModalREPL
 
 
 class MockLM(BaseLM):

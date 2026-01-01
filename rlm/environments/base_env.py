@@ -1,6 +1,6 @@
-from rlm.core.types import REPLResult
-
 from abc import ABC, abstractmethod
+
+from rlm.core.types import REPLResult
 
 
 class BaseEnv(ABC):

@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Dict, Any
+from typing import Any
 
 from rlm.core.types import UsageSummary
 
@@ -15,11 +15,11 @@ class BaseLM(ABC):
         self.kwargs = kwargs
 
     @abstractmethod
-    def completion(self, prompt: str | Dict[str, Any]) -> str:
+    def completion(self, prompt: str | dict[str, Any]) -> str:
         raise NotImplementedError
 
     @abstractmethod
-    async def acompletion(self, prompt: str | Dict[str, Any]) -> str:
+    async def acompletion(self, prompt: str | dict[str, Any]) -> str:
         raise NotImplementedError
 
     @abstractmethod

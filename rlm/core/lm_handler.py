@@ -4,15 +4,14 @@ LMHandler - Routes LLM requests from the RLM process and environment subprocesse
 Uses a multi-threaded socket server. Protocol: 4-byte length prefix + JSON payload.
 """
 
-from rlm.clients.base_lm import BaseLM
-from rlm.core.comms_utils import socket_send, socket_recv, LMRequest, LMResponse
-from rlm.core.types import RLMChatCompletion, UsageSummary
-
-from typing import Optional, Dict
-from socketserver import ThreadingTCPServer, StreamRequestHandler
-from threading import Thread
 import asyncio
 import time
+from socketserver import StreamRequestHandler, ThreadingTCPServer
+from threading import Thread
+
+from rlm.clients.base_lm import BaseLM
+from rlm.core.comms_utils import LMRequest, LMResponse, socket_recv, socket_send
+from rlm.core.types import RLMChatCompletion, UsageSummary
 
 
 class LMRequestHandler(StreamRequestHandler):
@@ -36,9 +35,7 @@ class LMRequestHandler(StreamRequestHandler):
                 # Single request: process one prompt
                 response = self._handle_single(request, handler)
             else:
-                response = LMResponse.error_response(
-                    "Missing 'prompt' or 'prompts' in request."
-                )
+                response = LMResponse.error_response("Missing 'prompt' or 'prompts' in request.")
 
             socket_send(self.connection, response.to_dict())
 
@@ -87,10 +84,9 @@ class LMRequestHandler(StreamRequestHandler):
                 prompt=prompt,
                 response=content,
                 usage_summary=usage_summary,
-                execution_time=total_time
-                / len(request.prompts),  # approximate per-prompt time
+                execution_time=total_time / len(request.prompts),  # approximate per-prompt time
             )
-            for prompt, content in zip(request.prompts, results)
+            for prompt, content in zip(request.prompts, results, strict=True)
         ]
 
         return LMResponse.batched_success_response(chat_completions=chat_completions)
@@ -118,10 +114,10 @@ class LMHandler:
         port: int = 0,  # auto-assign available port
     ):
         self.default_client = client
-        self.clients: Dict[str, BaseLM] = {}
+        self.clients: dict[str, BaseLM] = {}
         self.host = host
-        self._server: Optional[ThreadingLMServer] = None
-        self._thread: Optional[Thread] = None
+        self._server: ThreadingLMServer | None = None
+        self._thread: Thread | None = None
         self._port = port
 
         self.register_client(client.model_name, client)
@@ -130,7 +126,7 @@ class LMHandler:
         """Register a client for a specific model name."""
         self.clients[model_name] = client
 
-    def get_client(self, model: Optional[str] = None) -> BaseLM:
+    def get_client(self, model: str | None = None) -> BaseLM:
         """Get client by model name, or return default."""
         if model and model in self.clients:
             return self.clients[model]
@@ -168,7 +164,7 @@ class LMHandler:
             self._server = None
             self._thread = None
 
-    def completion(self, prompt: str, model: Optional[str] = None) -> str:
+    def completion(self, prompt: str, model: str | None = None) -> str:
         """Direct completion call (for main process use)."""
         return self.get_client(model).completion(prompt)
 

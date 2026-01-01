@@ -4,12 +4,12 @@ Logger for RLM iterations.
 Writes RLMIteration data to JSON-lines files for analysis and debugging.
 """
 
-from rlm.core.types import RLMIteration, RLMMetadata
-
-from datetime import datetime
 import json
-import uuid
 import os
+import uuid
+from datetime import datetime
+
+from rlm.core.types import RLMIteration, RLMMetadata
 
 
 class RLMLogger:
@@ -21,9 +21,7 @@ class RLMLogger:
 
         timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
         run_id = str(uuid.uuid4())[:8]
-        self.log_file_path = os.path.join(
-            log_dir, f"{file_name}_{timestamp}_{run_id}.jsonl"
-        )
+        self.log_file_path = os.path.join(log_dir, f"{file_name}_{timestamp}_{run_id}.jsonl")
 
         self._iteration_count = 0
         self._metadata_logged = False

@@ -1,32 +1,32 @@
-from rlm.clients import get_client, BaseLM
-from rlm.environments import get_environment, BaseEnv
+import time
+from contextlib import contextmanager
+from typing import Any
+
+from rlm.clients import BaseLM, get_client
 from rlm.core.lm_handler import LMHandler
-from rlm.logger.rlm_logger import RLMLogger
 from rlm.core.types import (
-    RLMIteration,
-    REPLResult,
-    CodeBlock,
     ClientBackend,
+    CodeBlock,
     EnvironmentType,
+    REPLResult,
     RLMChatCompletion,
+    RLMIteration,
     RLMMetadata,
 )
-from rlm.utils.prompts import (
-    build_rlm_system_prompt,
-    build_user_prompt,
-    QueryMetadata,
-    RLM_SYSTEM_PROMPT,
-)
+from rlm.environments import BaseEnv, get_environment
+from rlm.logger.rlm_logger import RLMLogger
 from rlm.utils.parsing import (
     find_code_blocks,
     find_final_answer,
     format_iteration,
 )
+from rlm.utils.prompts import (
+    RLM_SYSTEM_PROMPT,
+    QueryMetadata,
+    build_rlm_system_prompt,
+    build_user_prompt,
+)
 from rlm.utils.rlm_utils import filter_sensitive_keys
-
-from typing import Dict, Any, Optional, List
-from contextlib import contextmanager
-import time
 
 
 class RLM:
@@ -40,16 +40,16 @@ class RLM:
     def __init__(
         self,
         backend: ClientBackend = "openai",
-        backend_kwargs: Dict[str, Any] = {},
+        backend_kwargs: dict[str, Any] | None = None,
         environment: EnvironmentType = "local",
-        environment_kwargs: Dict[str, Any] = {},
+        environment_kwargs: dict[str, Any] | None = None,
         depth: int = 0,
         max_depth: int = 1,
         max_iterations: int = 30,
-        custom_system_prompt: Optional[str] = None,
-        other_backends: Optional[List[ClientBackend]] = None,
-        other_backend_kwargs: Optional[List[Dict[str, Any]]] = None,
-        logger: Optional[RLMLogger] = None,
+        custom_system_prompt: str | None = None,
+        other_backends: list[ClientBackend] | None = None,
+        other_backend_kwargs: list[dict[str, Any]] | None = None,
+        logger: RLMLogger | None = None,
     ):
         """
         Args:
@@ -76,9 +76,7 @@ class RLM:
         self.depth = depth
         self.max_depth = max_depth
         self.max_iterations = max_iterations
-        self.system_prompt = (
-            custom_system_prompt if custom_system_prompt else RLM_SYSTEM_PROMPT
-        )
+        self.system_prompt = custom_system_prompt if custom_system_prompt else RLM_SYSTEM_PROMPT
         self.logger = logger
 
         # Log metadata if logger is provided
@@ -96,7 +94,7 @@ class RLM:
             self.logger.log_metadata(metadata)
 
     @contextmanager
-    def _spawn_completion_context(self, prompt: str | Dict[str, Any]):
+    def _spawn_completion_context(self, prompt: str | dict[str, Any]):
         """
         Spawn an LM handler and environment for a single completion call.
         Cleans up both when the context exits.
@@ -107,7 +105,7 @@ class RLM:
 
         # Register other clients to be available as sub-call options
         if self.other_backends and self.other_backend_kwargs:
-            for backend, kwargs in zip(self.other_backends, self.other_backend_kwargs):
+            for backend, kwargs in zip(self.other_backends, self.other_backend_kwargs, strict=True):
                 other_client: BaseLM = get_client(backend, kwargs)
                 lm_handler.register_client(other_client.model_name, other_client)
 
@@ -129,7 +127,7 @@ class RLM:
             if hasattr(environment, "cleanup"):
                 environment.cleanup()
 
-    def _setup_prompt(self, prompt: str | Dict[str, Any]) -> List[Dict[str, Any]]:
+    def _setup_prompt(self, prompt: str | dict[str, Any]) -> list[dict[str, Any]]:
         """
         Setup the system prompt for the RLM. Also include metadata about the prompt and build
         up the initial message history.
@@ -142,7 +140,7 @@ class RLM:
         return message_history
 
     def completion(
-        self, prompt: str | Dict[str, Any], root_prompt: Optional[str] = None
+        self, prompt: str | dict[str, Any], root_prompt: str | None = None
     ) -> RLMChatCompletion:
         """
         Recursive Language Model completion call. This is the main entry point for querying an RLM, and
@@ -201,7 +199,7 @@ class RLM:
 
     def _completion_turn(
         self,
-        prompt: str | Dict[str, Any],
+        prompt: str | dict[str, Any],
         lm_handler: LMHandler,
         environment: BaseEnv,
     ) -> RLMIteration:
@@ -226,9 +224,7 @@ class RLM:
             iteration_time=iteration_time,
         )
 
-    def _default_answer(
-        self, message_history: List[Dict[str, Any]], lm_handler: LMHandler
-    ) -> str:
+    def _default_answer(self, message_history: list[dict[str, Any]], lm_handler: LMHandler) -> str:
         """
         Default behavior if the RLM runs out of iterations and does not find a final answer.
         It will take the message history, and try to generate a final answer from it.

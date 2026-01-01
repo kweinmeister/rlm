@@ -2,13 +2,12 @@
 Parsing utilities for RLM trjaectories.
 """
 
-from rlm.core.types import RLMIteration, REPLResult
-
 import re
-from typing import List, Dict, Optional, Tuple
+
+from rlm.core.types import REPLResult, RLMIteration
 
 
-def find_code_blocks(text: str) -> List[str]:
+def find_code_blocks(text: str) -> list[str]:
     """
     Find REPL code blocks in text wrapped in triple backticks and return List of content(s).
     Returns None if no code blocks are found.
@@ -23,7 +22,7 @@ def find_code_blocks(text: str) -> List[str]:
     return results
 
 
-def find_final_answer(text: str) -> Optional[Tuple[str, str]]:
+def find_final_answer(text: str) -> tuple[str, str] | None:
     """
     Find FINAL(...) or FINAL_VAR(...) statement in response and return (type, content).
     Returns None if neither pattern is found.
@@ -45,7 +44,7 @@ def find_final_answer(text: str) -> Optional[Tuple[str, str]]:
 
 def format_iteration(
     iteration: RLMIteration, max_character_length: int = 20000
-) -> List[Dict[str, str]]:
+) -> list[dict[str, str]]:
     """
     Format an RLM iteration (including all code blocks) to append to the message history for
     the prompt of the LM in the next iteration. We also truncate code execution results
@@ -107,7 +106,7 @@ def format_execution_result(result: REPLResult) -> str:
             "__doc__",
         ]:
             # Only show simple types or short representations
-            if isinstance(value, (str, int, float, bool, list, dict, tuple)):
+            if isinstance(value, str | int | float | bool | list | dict | tuple):
                 important_vars[key] = ""
 
     if important_vars:
@@ -116,7 +115,7 @@ def format_execution_result(result: REPLResult) -> str:
     return "\n\n".join(result_parts) if result_parts else "No output"
 
 
-def check_for_final_answer(response: str, repl_env, logger) -> Optional[str]:
+def check_for_final_answer(response: str, repl_env, logger) -> str | None:
     """Check if response contains a final answer."""
     result = find_final_answer(response)
     if result is None:
@@ -130,9 +129,7 @@ def check_for_final_answer(response: str, repl_env, logger) -> Optional[str]:
         # Get the variable directly from the REPL environment
         try:
             # Strip spaces, quotes, and newlines from variable name
-            variable_name = (
-                content.strip().strip('"').strip("'").strip("\n").strip("\r")
-            )
+            variable_name = content.strip().strip('"').strip("'").strip("\n").strip("\r")
 
             # Check if variable exists in the REPL environment's locals
             if variable_name in repl_env.locals:

@@ -1,7 +1,7 @@
-from typing import Dict, Any
+from typing import Any
 
 
-def filter_sensitive_keys(kwargs: Dict[str, Any]) -> Dict[str, Any]:
+def filter_sensitive_keys(kwargs: dict[str, Any]) -> dict[str, Any]:
     """Filter out sensitive keys like API keys from kwargs."""
     filtered = {}
     for key, value in kwargs.items():
